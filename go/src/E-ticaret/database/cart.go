@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/akhil/ecommerce-yt/models"
+	"github.com/Burak-Atas/ecommerce/models"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -121,8 +121,7 @@ func RemoveCartItemOne(ctx context.Context, prodCollection, userCollection *mong
 
 	return nil
 }
-
-func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, userID string) error {
+func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, MySparisCollection *mongo.Collection, userID string) error {
 	id, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		log.Println(err)
@@ -130,10 +129,12 @@ func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, user
 	}
 	var getcartitems models.User
 	var ordercart models.Order
-	ordercart.Order_ID = primitive.NewObjectID()
+	ordercart.Order_ID = primitive.NewObjectID() // Her sipariş için benzersiz bir ID oluşturun
 	ordercart.Orderered_At = time.Now()
 	ordercart.Order_Cart = make([]models.ProductUser, 0)
 	ordercart.Payment_Method.COD = true
+
+	// Sepetteki ürünleri topla ve siparişin toplam fiyatını hesapla
 	unwind := bson.D{{Key: "$unwind", Value: bson.D{primitive.E{Key: "path", Value: "$usercart"}}}}
 	grouping := bson.D{{Key: "$group", Value: bson.D{primitive.E{Key: "_id", Value: "$_id"}, {Key: "total", Value: bson.D{primitive.E{Key: "$sum", Value: "$usercart.price"}}}}}}
 	currentresults, err := userCollection.Aggregate(ctx, mongo.Pipeline{unwind, grouping})
@@ -151,30 +152,41 @@ func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, user
 		total_price = price.(int32)
 	}
 	ordercart.Price = int(total_price)
+
+	// Kullanıcının sepetindeki ürünleri al
 	filter := bson.D{primitive.E{Key: "_id", Value: id}}
-	update := bson.D{{Key: "$push", Value: bson.D{primitive.E{Key: "orders", Value: ordercart}}}}
-	_, err = userCollection.UpdateMany(ctx, filter, update)
+	err = userCollection.FindOne(ctx, filter).Decode(&getcartitems)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
-	err = userCollection.FindOne(ctx, bson.D{primitive.E{Key: "_id", Value: id}}).Decode(&getcartitems)
-	if err != nil {
-		log.Println(err)
+
+	// Sepette ürün varsa
+	if len(getcartitems.UserCart) > 0 {
+		// Sepetteki ürünleri yeni siparişe ekle
+		ordercart.Order_Cart = getcartitems.UserCart
+
+		// Yeni siparişi kullanıcının sipariş listesine ekle
+		update := bson.D{{Key: "$push", Value: bson.D{primitive.E{Key: "orders", Value: ordercart}}}}
+		_, err = userCollection.UpdateMany(ctx, filter, update)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+	} else {
+		// Sepet boşsa, hata mesajı döndür
+		return nil
 	}
-	filter2 := bson.D{primitive.E{Key: "_id", Value: id}}
-	update2 := bson.M{"$push": bson.M{"orders.$[].order_list": bson.M{"$each": getcartitems.UserCart}}}
-	_, err = userCollection.UpdateOne(ctx, filter2, update2)
-	if err != nil {
-		log.Println(err)
-	}
+
+	// Sepet boşalt
 	usercart_empty := make([]models.ProductUser, 0)
 	filtered := bson.D{primitive.E{Key: "_id", Value: id}}
 	updated := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "usercart", Value: usercart_empty}}}}
 	_, err = userCollection.UpdateOne(ctx, filtered, updated)
 	if err != nil {
 		return ErrCantBuyCartItem
-
 	}
+
 	return nil
 }
 

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/akhil/ecommerce-yt/models"
+	"github.com/Burak-Atas/ecommerce/models"
 
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
@@ -143,7 +143,7 @@ func EditHomeAddress() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 		filter := bson.D{primitive.E{Key: "_id", Value: usert_id}}
-		update := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "address.0.house_name", Value: editaddress.House}, {Key: "address.0.street_name", Value: editaddress.Street}, {Key: "address.0.city_name", Value: editaddress.City}, {Key: "address.0.pin_code", Value: editaddress.Pincode}}}}
+		update := bson.D{{Key: "$set", Value: bson.D{primitive.E{Key: "address.0.house", Value: editaddress.House}, {Key: "address.0.street", Value: editaddress.Street}, {Key: "address.0.city", Value: editaddress.City}, {Key: "address.0.pincode", Value: editaddress.Pincode}}}}
 		_, err = UserCollection.UpdateOne(ctx, filter, update)
 		if err != nil {
 			c.IndentedJSON(500, "Something Went Wrong")
@@ -214,4 +214,8 @@ func DeleteAddress() gin.HandlerFunc {
 		ctx.Done()
 		c.IndentedJSON(200, "Successfully Deleted!")
 	}
+}
+
+func (app Application) UpdateUsers() gin.HandlerFunc {
+	return func(c *gin.Context) {}
 }

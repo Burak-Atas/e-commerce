@@ -37,7 +37,7 @@ type ProductUser struct {
 	Product_ID   primitive.ObjectID `bson:"_id" json:"id"`
 	Product_Name *string            `json:"name"`
 	Price        int                `json:"price"  bson:"price"`
-	Image        *string            `json:"image"  bson:"image"`
+	Image        *string            `json:"imageUrl"`
 	CategoryId   *string            `json:"categoryId"`
 	Isactive     *bool              `json:"isActive"`
 }
@@ -51,11 +51,11 @@ type Address struct {
 }
 
 type Order struct {
-	Order_ID       primitive.ObjectID `bson:"_id"`
+	Order_ID       primitive.ObjectID `bson:"_id" json:"id"`
 	Order_Cart     []ProductUser      `json:"order_list"  bson:"order_list"`
 	Orderered_At   time.Time          `json:"ordered_on"  bson:"ordered_on"`
 	Price          int                `json:"total_price" bson:"total_price"`
-	Discount       *int               `json:"discount"    bson:"discount"`
+	IsConto        *int               `json:"isConto"    bson:"isConto"`
 	Payment_Method Payment            `json:"payment_method" bson:"payment_method"`
 }
 
@@ -67,4 +67,11 @@ type Payment struct {
 type Category struct {
 	Category_ID primitive.ObjectID `bson:"_id" json:"id"`
 	Name        string             `json:"name"`
+	Image       *string            `json:"imageUrl"  bson:"imageUrl"`
+}
+
+type Code struct {
+	Code_ID primitive.ObjectID `bson:"_id" json:"id"`
+	Name    string             `json:"name"`
+	IsConto int                `json:"isConto"`
 }
